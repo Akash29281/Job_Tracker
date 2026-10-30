@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from db.connection import get_db
 from models.application import Application
 from schemas.application import ApplicationCreate
+from fastapi import HTTPException
 
 app = FastAPI(title="Job Tracker API")
 
@@ -52,4 +53,25 @@ def create_application(
             "role": application.role,
             "status": application.status
         }
+    }
+
+@app.delete("/api/application/{application_id}")
+def delete_application(
+    application_id: int,
+    db: Session = Depends(get_db)
+):
+    application = db.query(Application).filter(
+        Application.id == application_id
+    ).first()
+
+    if application is None:
+        raise HTTPException(
+            status_code = 404,
+            detail = "Application Not Found"
+        )
+    db.delete(application)
+    db.commit()
+
+    return{
+        "message": "Application deleted sucessfully"
     }

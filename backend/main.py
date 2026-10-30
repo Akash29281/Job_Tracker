@@ -3,7 +3,7 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 from db.connection import get_db
 from models.application import Application
-from schemas.application import ApplicationCreate
+from schemas.application import ApplicationCreate,ApplicationUpdate
 from fastapi import HTTPException
 
 app = FastAPI(title="Job Tracker API")
@@ -49,6 +49,36 @@ def create_application(
         "application": {
             "id": application.id,
             "user_id": application.user_id,
+            "company": application.company,
+            "role": application.role,
+            "status": application.status
+        }
+    }
+
+@app.update("/api/application/{application_id}")
+def update_application(
+    application_id: int,
+    data: ApplicationUpdate,
+    db: Session = Depends(get_db)
+):
+    application = db.query(Application).filter(
+        Application.id == application_id
+    ).first()
+    if application is None:
+        raise HTTPException(
+            status_code= 404,
+            detail = "Application not found"
+        )
+    if application is not None :
+        application.status = data.status
+
+    db.commit()
+    db.refresh(application)
+
+    return {
+        "message" : "Application Update sucessfully",
+        "application": {
+            "id": application.id,
             "company": application.company,
             "role": application.role,
             "status": application.status

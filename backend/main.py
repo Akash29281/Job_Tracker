@@ -8,6 +8,7 @@ from fastapi import HTTPException
 from schemas.user import UserCreate, Userlogin
 from models.user import User
 from core.security import hash_password, verify_password
+from core.token import create_access_token
 
 app = FastAPI(title="Job Tracker API")
 
@@ -168,8 +169,12 @@ def login_user(
             status_code=401,
             detail="Invalid email or password"
         )
+    access_token = create_access_token(user.id)
+
     return{
         "message": "Login Sucessfully",
+        "access_token": access_token,
+        "token_type": "bearer",
         "user": {
             "id": user.id,
             "name": user.name,

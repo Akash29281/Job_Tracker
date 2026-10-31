@@ -5,6 +5,9 @@ from db.connection import get_db
 from models.application import Application
 from schemas.application import ApplicationCreate,ApplicationUpdate
 from fastapi import HTTPException
+from schemas.user import UserCreate, Userlogin
+from models.user import User
+from core.security import hash_password, verify_password
 
 app = FastAPI(title="Job Tracker API")
 
@@ -55,7 +58,7 @@ def create_application(
         }
     }
 
-@app.update("/api/application/{application_id}")
+@app.patch("/api/application/{application_id}")
 def update_application(
     application_id: int,
     data: ApplicationUpdate,
@@ -104,4 +107,72 @@ def delete_application(
 
     return{
         "message": "Application deleted sucessfully"
+    }
+
+@app.post("/api/auth/register")
+def register_user(
+    data: UserCreate,
+    db: Session = Depends(get_db)
+
+):
+    # Check if email already exists
+    existing_user = db.query(User).filter(
+        User.email == data.email
+    ).first()
+
+    if existing_user:
+        raise HTTPException(
+            status_code = 404,
+            detail="Email already registered"
+        )
+    #hash Password
+    hashed_password = hash_password(data.password)
+
+    #Create new user
+    new_user = User(
+        name = data.name,
+        email = data.email,
+        password_hash = hashed_password
+    )
+
+    # Save user in database
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    return {
+        "message": "User registered sucessfully",
+        "user": {
+            "id": new_user.id,
+            "name": new_user.name,
+            "email": new_user.email
+        }
+    }
+
+@app.post("/api/auth/login")
+def login_user(
+        data: Userlogin,
+        db: Session = Depends(get_db)
+):
+    user = db.query(User).filter(
+        User.email == data.email
+    ).first()
+
+    if user is None:
+        raise HTTPException(
+            status_code = 401,
+            detail="Invalid email or password"
+        )
+    if not verify_password(data.password, user.password_hash):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password"
+        )
+    return{
+        "message": "Login Sucessfully",
+        "user": {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email
+        }
     }

@@ -1,15 +1,6 @@
-from pydantic import BaseModel, Field
 from enum import Enum
 from typing import Optional
 from pydantic import BaseModel, Field
-
-
-class ApplicationCreate(BaseModel):
-    user_id: int
-    company: str = Field(min_length=1, max_length=100)
-    role: str = Field(min_length=1, max_length=100)
-    status: str = "applied"
-
 
 
 class ApplicationStatus(str, Enum):
@@ -23,7 +14,6 @@ class ApplicationStatus(str, Enum):
 
 
 class ApplicationCreate(BaseModel):
-    user_id: int
     company: str = Field(min_length=1, max_length=100)
     role: str = Field(min_length=1, max_length=100)
     status: ApplicationStatus = ApplicationStatus.APPLIED
@@ -31,4 +21,3 @@ class ApplicationCreate(BaseModel):
 
 class ApplicationUpdate(BaseModel):
     status: Optional[ApplicationStatus] = None
-

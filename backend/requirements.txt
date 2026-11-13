@@ -5,3 +5,4 @@ alembic
 python-dotenv
 bcrypt
 PyMySQL
+python-jose[cryptography]

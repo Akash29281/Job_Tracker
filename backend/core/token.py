@@ -1,24 +1,33 @@
 import os
+from pathlib import Path
 from datetime import datetime, timedelta, timezone
 
 from dotenv import load_dotenv
-from jose import jwt
+from jose import jwt, JWTError
+
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import JWTError
 from sqlalchemy.orm import Session
 
 from db.connection import get_db
 from models.user import User
 
-load_dotenv()
+
+# Load backend/.env
+BACKEND_DIR = Path(__file__).resolve().parents[1]
+load_dotenv(BACKEND_DIR / ".env", override=True)
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(
-    os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30)
+    os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30")
 )
 
+if not SECRET_KEY:
+    raise RuntimeError("SECRET_KEY is missing from .env")
+
+
+# Create JWT token
 def create_access_token(user_id: int):
     expire = datetime.now(timezone.utc) + timedelta(
         minutes=ACCESS_TOKEN_EXPIRE_MINUTES
@@ -29,17 +38,18 @@ def create_access_token(user_id: int):
         "exp": expire
     }
 
-    token = jwt.encode(
+    return jwt.encode(
         payload,
         SECRET_KEY,
         algorithm=ALGORITHM
     )
 
-    return token
 
+# Read Bearer token
 security = HTTPBearer()
 
 
+# Verify token and identify user
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db)

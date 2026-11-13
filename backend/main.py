@@ -8,7 +8,8 @@ from fastapi import HTTPException
 from schemas.user import UserCreate, Userlogin
 from models.user import User
 from core.security import hash_password, verify_password
-from core.token import create_access_token
+from core.token import create_access_token,get_current_user
+
 
 app = FastAPI(title="Job Tracker API")
 
@@ -17,8 +18,13 @@ def home():
     return {"message": "Job Tracker API is running"}
 
 @app.get("/api/applications")
-def get_applications(db: Session = Depends(get_db)):
-    applications = db.query(Application).all()
+def get_applications(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+    ):
+    applications = db.query(Application).filter(
+        Application.user_id == current_user.id
+    ).all()
 
     return {
         "applications": [
@@ -35,10 +41,11 @@ def get_applications(db: Session = Depends(get_db)):
 @app.post("/api/applications")
 def create_application(
     data: ApplicationCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     application = Application(
-        user_id=data.user_id,
+        user_id=current_user.id,
         company=data.company,
         role=data.role,
         status=data.status
@@ -59,21 +66,23 @@ def create_application(
         }
     }
 
-@app.patch("/api/application/{application_id}")
+@app.patch("/api/applications/{application_id}")
 def update_application(
     application_id: int,
     data: ApplicationUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     application = db.query(Application).filter(
-        Application.id == application_id
+        Application.id == application_id,
+        Application.user_id == current_user.id
     ).first()
     if application is None:
         raise HTTPException(
             status_code= 404,
             detail = "Application not found"
         )
-    if application is not None :
+    if data.status is not None :
         application.status = data.status
 
     db.commit()
@@ -89,13 +98,15 @@ def update_application(
         }
     }
 
-@app.delete("/api/application/{application_id}")
+@app.delete("/api/applications/{application_id}")
 def delete_application(
     application_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     application = db.query(Application).filter(
-        Application.id == application_id
+        Application.id == application_id,
+        Application.user_id == current_user.id
     ).first()
 
     if application is None:
